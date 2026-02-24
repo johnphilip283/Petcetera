@@ -2,9 +2,9 @@
 
 ## Configuration
 
-### Backend Configuration (Current State)
+### Backend configuration (current state)
 
-In `index.js`, the MySQL connection is hard-coded:
+The MySQL connection in `index.js` is hard-coded:
 
 ```js
 let connection = mysql.createConnection({
@@ -21,15 +21,30 @@ CORS is enabled globally:
 app.use(cors());
 ```
 
-The server listens on port 5000:
+Port is hard-coded to `5000`:
 
 ```js
 app.listen(5000, () => console.log("potato on port 5000"));
 ```
 
-### Recommended Environment Variables (Suggested Improvement)
+### Frontend configuration (current state)
 
-Although not implemented, a typical setup would be:
+Frontend calls the API via absolute URLs embedded in components, e.g.:
+
+```js
+fetch('http://localhost:5000/listings')
+```
+
+User identity is hard-coded:
+
+```js
+// src/constants.js
+export const user_id = 2;
+```
+
+### Recommended environment variables (suggested improvement)
+
+Backend:
 
 - `PORT=5000`
 - `DB_HOST=localhost`
@@ -40,28 +55,38 @@ Although not implemented, a typical setup would be:
 Example refactor:
 
 ```js
+const port = process.env.PORT || 5000;
+
 const connection = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
+
+app.listen(port, () => console.log(`API on port ${port}`));
 ```
 
-### Frontend Configuration
+Frontend:
 
-The frontend calls `http://localhost:5000/...` directly from components. A common improvement is to centralize a base URL (e.g., `REACT_APP_API_BASE_URL`).
+- `REACT_APP_API_BASE_URL=http://localhost:5000`
 
-Example:
+Example centralization:
 
 ```js
 // src/api.js
 export const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+
+export function getJson(path) {
+  return fetch(`${API_BASE}${path}`).then(r => r.json());
+}
 ```
 
-Then:
+Then in components:
 
 ```js
-fetch(`${API_BASE}/listings`)
+import { getJson } from '../api';
+
+getJson('/listings').then(r => this.setState({ listings: r.data }));
 ```
 
