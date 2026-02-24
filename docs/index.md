@@ -2,28 +2,24 @@
 
 ## Overview
 
-`example-docs-generation-component` is a small full-stack monolith (single repository) consisting of:
+`example-docs-generation-component` is a small full-stack monorepo for a pet-sitting marketplace prototype. It contains:
 
-- **React SPA** (Create React App) using **Material-UI** for UI components.
-- **Express REST-like API** using the `mysql` driver.
-- **MySQL database** named **`petsitting`** with schema, triggers, seed data.
+- **Frontend:** React single-page application (Create React App) using **Material-UI** and `react-router-dom`.
+- **Backend:** Single-file **Express** API using the `mysql` driver and enabling **CORS** for the SPA.
+- **Database:** **MySQL** schema `petsitting` with tables, triggers (constraint enforcement), seed data, and helper SQL for root auth.
+- **Docs site:** MkDocs + `techdocs-core` plugin (Backstage TechDocs-compatible).
 
-The React app uses `fetch()` to call the backend at **`http://localhost:5000`**, while CRA runs its dev server on **`http://localhost:3000`**.
+### Key user flows (current behavior)
 
-### Primary Features
+- **Dashboard:** Displays a “current user” (hard-coded) with their pets and their listings; can open a modal to add a pet.
+- **Listings:** Browse listings and create a new listing.
+- **Sitters:** Browse sitters and view their ratings.
 
-- Browse all **pet-sitting job listings**.
-- View a **dashboard** for a “logged-in” user (hard-coded via `user_id` constant):
-  - their pets
-  - their listings
-  - sitter preferences UI (front-end only; no persistence in provided API)
-- Browse **sitters** and their average rating.
+### Important constraints / limitations
 
-### Non-Goals / Current Limitations
-
-- No real authentication/authorization (user identity is implied via a constant).
+- No authentication/authorization: the SPA uses a hard-coded `user_id` (`src/constants.js`).
+- Backend “write” operations use **GET** with query strings (`/pets/add`, `/listings/create`).
+- SQL statements interpolate user input directly (SQL injection risk).
 - No tests.
-- Several write operations are implemented as **GET** endpoints with query string parameters.
-- SQL is built via string interpolation (SQL injection risk).
-- No environment-based configuration; DB credentials are hard-coded.
+- Backend configuration is hard-coded (DB host/user/password, port).
 

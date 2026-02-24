@@ -2,82 +2,99 @@
 
 ## Architecture
 
-### High-Level Structure
+### Repository layout
 
-```
+```text
 repo/
-  index.js                  # Express API server entrypoint
-  package.json              # CRA dependencies + scripts (no server scripts)
-  public/                   # CRA public assets (incl. /assets)
-  src/                      # React SPA
+  index.js                  # Express API server entrypoint (port 5000)
+  package.json              # CRA scripts + deps (backend started manually)
+  public/                   # CRA public assets (includes /assets)
+  src/                      # React SPA source
+  docs/                     # MkDocs content
+  mkdocs.yaml               # MkDocs navigation + plugins
   sql_script/               # MySQL schema, triggers, seed data
 ```
 
-### Runtime Topology (Development)
+### Runtime topology (development)
 
-- **MySQL** runs locally and hosts the `petsitting` schema.
-- **Express API** runs on `localhost:5000`.
-- **React dev server** runs on `localhost:3000`.
+- **MySQL**: local server hosting schema `petsitting`
+- **Express API**: `http://localhost:5000`
+- **React dev server**: `http://localhost:3000`
 
-The browser loads the React SPA from `:3000` which calls the API at `:5000`. CORS is enabled globally on the API.
-
-### Backend (Express + mysql)
-
-- Single file server: `index.js`
-- Connects once at startup via `mysql.createConnection`.
-- Defines multiple **GET** routes that perform `connection.query(sql, cb)`.
-- Returns JSON in the shape:
-
-```json
-{ "data": [ ... ] }
-```
-
-For create endpoints it may return:
-
-```json
-{ "message": "...", "data": { ...mysql result... } }
-```
+The browser loads the SPA from `:3000`. The SPA calls the API at `:5000`. CORS is enabled globally in Express.
 
 ### Frontend (React + Material-UI)
 
-- CRA entry: `src/index.js` renders `<Routes />`.
-- Pages/containers include:
-  - `Homepage`
-  - `Dashboard`
-  - `Listings`
-  - `CreateListing`
-- Components call API using `fetch()` with hard-coded base URL `http://localhost:5000`.
-- Styling is a mix of global CSS and per-component SCSS.
+- **Entry:** `src/index.js` renders the app and route tree.
+- **Routing:** `react-router-dom` for navigation between pages (Home/Dashboard/Listings/Sitters).
+- **Data fetching:** `fetch()` calls directly to `http://localhost:5000/...`.
+- **State management:** local component state (class components) + `componentDidMount` for loading.
+- **Styling:** SCSS files co-located with components; compiled by CRA via `node-sass`.
+
+Key UI modules:
+
+- `src/components/dashboard/Dashboard.js`: loads user/pets/listings.
+- `src/components/dashboard/AddPet.js`: modal form calling `/pets/add`.
+- `src/components/listings/ListingCard.js`: renders listing data.
+- `src/components/dashboard/SitterPreferences.js`: checkbox UI only (no persistence).
+
+Hard-coded “session”:
+
+```js
+// src/constants.js
+export const user_id = 2;
+```
+
+### Backend (Express + mysql)
+
+- **Entry:** `index.js` at repo root.
+- **DB connection:** single `mysql.createConnection(...)` created at startup and used for all routes.
+- **Endpoints:** REST-like but implemented exclusively with `app.get(...)`.
+- **Response shape:** typically `{ data: [...] }`; for creates may include `{ message, data }`.
+
+CORS is enabled globally:
+
+```js
+const cors = require('cors');
+app.use(cors());
+```
 
 ### Database (MySQL)
 
-SQL scripts:
+- `sql_script/petsitting_create.sql` creates schema, tables, triggers, and a `duration()` function.
+- `sql_script/petsitting_insert.sql` seeds users/species/pets/requests/ratings/preferences.
+- `sql_script/password.sql` sets root auth method to `mysql_native_password`.
 
-- `sql_script/petsitting_create.sql` creates tables, triggers, functions.
-- `sql_script/petsitting_insert.sql` seeds initial data.
-- `sql_script/password.sql` configures `root` auth method.
+Core entities:
 
-Important: schema uses tables named `user`, `request`, etc. (some are reserved words in other SQL dialects; in MySQL `user` can also be special in some contexts—be consistent with casing and quoting).
+- `user`: users, some are sitters (`is_sitter=1`)
+- `pet`: pets owned by a user
+- `request`: a listing/job request (owner, pet, date range, wage)
+- `rating`: ratings given to sitters
+- `species`, `preference`, `photo`
 
-### Data Model Summary
+Constraint enforcement uses triggers such as:
 
-Key tables:
-
-- `user(user_id, name, email, password, is_sitter, city, phone_number)`
-- `species(species_id, species_name)`
-- `pet(pet_id, name, age, description, owner_id, species_id)`
-- `request(request_id, title, description, owner_id, pet_id, start, end, wage)`
-- `rating(rating_id, stars, description, rater_id, ratee_id, rating_date)`
-- `preference(user_id, species_id)`
-- `photo(photo_id, pet_id, image)`
-
-Triggers enforce constraints such as:
-
-- ratings stars between 1 and 5
-- request start <= end
-- wage not negative
+- rating stars must be 1–5
 - cannot rate yourself
 - cannot rate a non-sitter
+- request start date must be <= end date
+- wage cannot be negative
 - cannot create a request for a pet you don’t own
-- email must contain `@`
+- user email must contain `@`
+
+### Notable design decisions and implications
+
+1. **GET endpoints for writes**
+   - Easy to call from the browser without extra middleware.
+   - But violates HTTP semantics; vulnerable to caching/prefetching issues and makes validation/body parsing awkward.
+
+2. **String-interpolated SQL**
+   - Simple but unsafe. Any user-supplied input can inject SQL.
+
+3. **Single DB connection**
+   - Works for local/dev. Production typically uses `mysql.createPool()` for concurrency and resiliency.
+
+4. **Hard-coded runtime config**
+   - Convenient for a demo, but blocks easy deployment.
 

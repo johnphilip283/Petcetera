@@ -2,9 +2,9 @@
 
 ## Development Guide
 
-### Running Locally
+### Local development workflow
 
-1. Start MySQL and load schema/seed.
+1. Start MySQL and load schema/seed (see Getting Started)
 2. Start API:
 
 ```bash
@@ -17,44 +17,54 @@ npx nodemon index.js
 npm start
 ```
 
-### Frontend Component Patterns
+### Frontend patterns used in this repo
 
-#### Data fetching in containers
-Containers like `Dashboard` and `Listings` fetch in `componentDidMount` and store results in local state:
+#### Data fetching in containers (class components)
+
+Example from `Dashboard`:
 
 ```js
 componentDidMount() {
-  this.getListings();
+  this.getUser();
+  this.getUserPets();
+  this.getUserListings();
 }
 
-getListings = _ => {
-  fetch(`http://localhost:5000/listings`)
+getUserPets = () => {
+  fetch(`http://localhost:5000/users/${user_id}/pets`)
     .then(r => r.json())
-    .then(r => this.setState({ listings: r.data }))
-}
+    .then(r => this.setState({ pets: r.data }));
+};
 ```
 
-#### Forms that write to the API
-`CreateListing` and `AddPet` build query strings and call “create” endpoints:
+#### Write operations via query strings
+
+Example from `AddPet`:
 
 ```js
-fetch(`http://localhost:5000/listings/create?owner_id=${user_id}&title=${this.state.title}...`)
+fetch(
+  `http://localhost:5000/pets/add?name=${this.state.name}` +
+  `&age=${this.state.age}` +
+  `&description=${this.state.description}` +
+  `&owner_id=${user_id}` +
+  `&species_id=${this.state.species_id}`
+)
 ```
 
-**Recommendation:** Use `encodeURIComponent` for user-entered fields to avoid malformed URLs:
+**Important:** query strings must be encoded for user-entered fields.
 
 ```js
-const title = encodeURIComponent(this.state.title);
+const name = encodeURIComponent(this.state.name);
 const description = encodeURIComponent(this.state.description);
-fetch(`${API_BASE}/listings/create?owner_id=${user_id}&title=${title}&description=${description}`);
+
+fetch(`${API_BASE}/pets/add?name=${name}&description=${description}&age=${age}&owner_id=${user_id}&species_id=${species_id}`);
 ```
 
-### Backend Development Notes
+### Backend patterns used in this repo
 
 #### Adding a new route
-Routes are currently defined inline in `index.js`.
 
-Example pattern:
+Routes are declared directly in `index.js`:
 
 ```js
 app.get('/resource', (req, res) => {
@@ -65,33 +75,52 @@ app.get('/resource', (req, res) => {
 });
 ```
 
-#### Use parameterized queries (recommended)
-Current code does:
+#### Parameterized queries (recommended)
+
+Current code often does:
 
 ```js
 const GET_USER = `SELECT * FROM user WHERE user_id=${id};`;
 ```
 
-Safer version:
+Recommended safer version:
 
 ```js
 connection.query(
   'SELECT * FROM user WHERE user_id = ?',
-  [id],
-  (err, results) => { ... }
+  [req.params.id],
+  (err, results) => {
+    if (err) return res.status(500).json({ error: String(err) });
+    res.json({ data: results });
+  }
 );
 ```
 
-### Styling
+#### Standardize errors and status codes (recommended)
 
-- Many components have `*.scss` files co-located.
-- CRA compiles SCSS via `node-sass`.
+Instead of `res.send(err)` everywhere, adopt a consistent shape:
 
-### Testing
+```js
+return res.status(500).json({
+  error: 'DB_QUERY_FAILED',
+  details: err.message
+});
+```
 
-No test framework is implemented beyond CRA defaults; there are no tests in the repo.
+### Database development notes
+
+- Schema is recreated from scratch by `petsitting_create.sql` (`drop database if exists`).
+- Triggers enforce core business rules; API callers should expect insert failures if constraints are violated.
+
+Example: listing insert can fail if `start > end` due to `check_end_start_date` trigger.
+
+### Testing (currently absent)
+
+No tests are present.
 
 Suggested additions:
-- Backend: Jest + supertest
-- Frontend: React Testing Library
+
+- Backend: `jest` + `supertest` (API route tests)
+- Frontend: React Testing Library (component + integration tests)
+- Optional: add CI to run lint/tests on PRs
 

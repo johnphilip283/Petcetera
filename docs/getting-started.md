@@ -4,70 +4,66 @@
 
 ### Prerequisites
 
-- Node.js (compatible with CRA 2.1.x; Node 10/12 era works best)
-- MySQL server (local)
+- Node.js compatible with older CRA tooling (project appears CRA 2.x era; Node 10/12 often works best)
 - npm
+- Local MySQL server
 
-### 1) Install Dependencies
+### Install dependencies
 
-From repo root:
+From the repo root:
 
 ```bash
 npm install
 ```
 
-> Note: `package.json` contains a dependency `cords` (likely a typo for `cors`). The backend code uses `cors`. If installs fail, verify dependencies.
+If install fails, verify dependencies. The docs mention `cords` may be a typo for `cors`.
 
-### 2) Create and Seed the Database
+### Create and seed the database
 
-1. Ensure MySQL is running.
-2. (Optional) adjust root authentication method:
+1) Start MySQL
+
+2) (Optional) ensure root uses `mysql_native_password`:
 
 ```sql
--- sql_script/password.sql
 ALTER USER 'root'@'localhost'
   IDENTIFIED WITH mysql_native_password BY '';
 ```
 
-3. Create schema and tables:
+3) Create schema/tables/triggers:
 
 ```bash
 mysql -u root -p < sql_script/petsitting_create.sql
 ```
 
-4. Seed data:
+4) Seed data:
 
 ```bash
 mysql -u root -p < sql_script/petsitting_insert.sql
 ```
 
-Database name is `petsitting`.
+### Start the backend API
 
-### 3) Start the Backend API
-
-The server entrypoint is `index.js` at repo root.
-
-Because `package.json` does not define a server script, start it manually:
+The server entrypoint is `index.js` at repo root:
 
 ```bash
 node index.js
 ```
 
-You should see:
+Expected log:
 
-```
+```text
 potato on port 5000
 ```
 
-For autoreload during development, use nodemon (install globally or as dev dependency):
+For auto-reload during development:
 
 ```bash
 npx nodemon index.js
 ```
 
-### 4) Start the React Frontend
+### Start the React frontend
 
-In another terminal:
+In a separate terminal:
 
 ```bash
 npm start
@@ -78,13 +74,13 @@ Open:
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:5000`
 
-### 5) Verify API Connectivity
+### Verify API connectivity
 
-Try:
+```bash
+curl http://localhost:5000/listings
+curl http://localhost:5000/users
+curl http://localhost:5000/species
+```
 
-- `http://localhost:5000/listings`
-- `http://localhost:5000/users`
-- `http://localhost:5000/species`
-
-You should receive JSON with a `data` array.
+Responses should be JSON with a `data` array.
 

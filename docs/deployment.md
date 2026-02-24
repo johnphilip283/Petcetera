@@ -2,43 +2,55 @@
 
 ## Deployment
 
-### Current State
+### Current state
 
-No production deployment pipeline is defined. The repo uses Create React App scripts (`start`, `build`) but does not include an Express start script in `package.json`.
+No production deployment pipeline is defined.
 
-### Typical Deployment Options
+- CRA supports `npm run build` for frontend.
+- Backend has no `npm run server` script; it must be started manually.
 
-#### Option A: Serve React build from Express (single process)
-1. Build frontend:
+### Option A: Serve React build from Express (single process)
+
+1) Build frontend:
 
 ```bash
 npm run build
 ```
 
-2. In Express, serve `build/`:
+2) Update Express to serve the build output:
 
 ```js
 const path = require('path');
+
 app.use(express.static(path.join(__dirname, 'build')));
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 ```
 
-3. Start Express as the only server.
+3) Run Express (now serves both API + SPA):
 
-#### Option B: Separate frontend hosting + API hosting
-- Host React build on static hosting (S3/CloudFront, Netlify, Vercel).
-- Host Express API separately.
-- Configure CORS and `REACT_APP_API_BASE_URL`.
+```bash
+node index.js
+```
 
-### Production Hardening Checklist (Recommended)
+### Option B: Separate hosting (recommended for real deployments)
+
+- Host React build on static hosting (S3/CloudFront, Netlify, Vercel, etc.)
+- Host Express API separately (VM, container, PaaS)
+- Configure:
+  - CORS allowed origins
+  - `REACT_APP_API_BASE_URL` pointing to the deployed API
+
+### Production hardening checklist
 
 - Replace GET writes with POST/PUT and JSON bodies (`app.use(express.json())`).
-- Parameterize SQL queries.
+- Parameterize all SQL queries; consider a query builder or ORM.
 - Add authentication (sessions/JWT) and authorization.
-- Add validation and consistent error responses.
-- Move DB credentials to environment variables.
-- Add logging, health checks, and connection pooling (`mysql.createPool`).
-- Add migrations (e.g., knex, prisma, or Flyway) instead of raw scripts.
+- Validate input (types, required fields, constraints) and normalize error responses.
+- Move DB credentials and ports to environment variables.
+- Add DB connection pooling (`mysql.createPool`).
+- Add structured logging, health checks, and monitoring.
+- Use migrations rather than “drop and recreate” scripts for schema evolution.
 
