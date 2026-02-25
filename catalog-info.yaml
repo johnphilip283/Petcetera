@@ -3,7 +3,6 @@ kind: Component
 metadata:
   name: example-docs-generation-component
   annotations:
-    backstage.io/techdocs-ref: dir:.
     backstage.io/source-location: url:https://github.com/johnphilip283/Petcetera/tree/master
 spec:
   type: service
