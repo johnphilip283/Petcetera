@@ -4,21 +4,20 @@
 
 ### Prerequisites
 
-- Node.js + npm (compatible with CRA v2 tooling)
-- MySQL server running locally
-- Ability to connect to MySQL as `root` with empty password (default in provided code/scripts)
+- Node.js + npm (compatible with CRA v2 / `react-scripts@2.1.1`)
+- Local MySQL server
+- Ability to connect to MySQL as `root` (empty password expected by default code)
 
 ### 1) Database setup
 
-Create the schema and seed it:
+Create schema and seed data:
 
 ```bash
-# From a shell with mysql client available
 mysql -u root < sql_script/petsitting_create.sql
 mysql -u root < sql_script/petsitting_insert.sql
 ```
 
-If your MySQL instance requires resetting root auth to native password with empty password:
+If needed, reset root authentication method to allow empty password (local-only):
 
 ```bash
 mysql -u root < sql_script/password.sql
@@ -28,7 +27,7 @@ Expected database name: `petsitting`.
 
 ### 2) Install dependencies
 
-From the repository root:
+From repository root:
 
 ```bash
 npm install
@@ -36,15 +35,13 @@ npm install
 
 ### 3) Start the backend (Express)
 
-The backend server is defined in `/index.js` and listens on **port 5000**.
-
-Because `package.json` scripts currently start CRA only, start the API server manually in a separate terminal:
+In terminal 1:
 
 ```bash
 node index.js
 ```
 
-You should see:
+Expected log:
 
 ```
 potato on port 5000
@@ -52,22 +49,15 @@ potato on port 5000
 
 ### 4) Start the frontend (React)
 
-In another terminal:
+In terminal 2:
 
 ```bash
 npm start
 ```
 
-CRA runs on `http://localhost:3000`.
+Frontend runs at: `http://localhost:3000`
 
-### 5) Verify end-to-end locally
-
-Open the SPA and navigate:
-
-- `/` homepage
-- `/dashboard` dashboard (uses hardcoded `user_id`)
-
-You can also verify the API directly:
+### 5) Verify the API
 
 ```bash
 curl http://localhost:5000/users
@@ -75,13 +65,14 @@ curl http://localhost:5000/listings
 curl http://localhost:5000/species
 ```
 
-### Local “logged in user”
+### “Logged-in user” simulation
 
-The SPA uses a constant in `src/constants.js`:
+The SPA uses a hardcoded user id:
 
 ```js
+// src/constants.js
 export const user_id = 2;
 ```
 
-Change this value to simulate a different user.
+Change `user_id` to simulate other users in seeded data.
 

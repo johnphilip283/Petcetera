@@ -2,21 +2,19 @@
 
 ## Deployment
 
-This repository is primarily set up for **local development**. There is no production deployment configuration (no Dockerfiles, no production build pipeline, no environment variable configuration for backend).
+This project is primarily designed for **local development**. There is no Dockerfile, production pipeline, or environment-based configuration out of the box.
 
-### Suggested deployment approach (if needed)
+### Suggested deployment approach (minimal)
 
-#### 1) Build frontend
+#### 1) Build the frontend
 
 ```bash
 npm run build
 ```
 
-This produces a static bundle under `build/`.
+#### 2) Serve the SPA from Express
 
-#### 2) Serve frontend from Express (recommended consolidation)
-
-Add in `index.js`:
+Add to `index.js`:
 
 ```js
 const path = require('path');
@@ -28,26 +26,28 @@ app.get('*', (req, res) => {
 });
 ```
 
-Then run a single Node process that serves API + SPA.
+Run a single Node process to serve both API and frontend.
 
-#### 3) Production-ready backend changes
+#### 3) Production-grade backend upgrades
 
-- Use `mysql.createPool` and proper error handling.
-- Replace GET mutation endpoints with POST and JSON bodies:
-  - `app.use(express.json())`
-- Add configuration via environment variables.
+- Use `mysql.createPool()`.
+- Switch create endpoints to `POST` with JSON bodies:
+  ```js
+  app.use(express.json());
+  ```
+- Add config via environment variables.
+- Add request validation (e.g., `zod`, `joi`, or `express-validator`).
 
-#### 4) Database
+#### 4) Database considerations
 
-- Run MySQL as a managed service or container.
-- Apply schema migrations (consider a migration tool) instead of ad-hoc SQL scripts.
+- Run MySQL as managed DB or container.
+- Replace ad-hoc SQL scripts with migrations (e.g., Knex migrations, Flyway, Liquibase).
 
-### Security considerations
+### Security considerations before real deployment
 
-Before any real deployment, address:
+- Fix SQL injection by parameterizing all queries.
+- Implement authentication/authorization (even simple session/JWT).
+- Stop storing plaintext passwords.
+- Enable HTTPS, add security headers (e.g., `helmet`).
+- Proper secrets management for DB credentials.
 
-- SQL injection (parameterize queries)
-- Authentication + authorization
-- Input validation at API layer
-- Secrets management (DB password)
-- HTTPS and secure headers

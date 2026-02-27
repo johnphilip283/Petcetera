@@ -2,52 +2,80 @@
 
 ## Development Guide
 
-### Running in development
+### Local dev workflow
 
-- Terminal 1 (DB): ensure MySQL is running and schema is created/seeded.
-- Terminal 2 (backend):
-  ```bash
-  node index.js
-  ```
-- Terminal 3 (frontend):
-  ```bash
-  npm start
-  ```
+1. Ensure MySQL is running and schema is created/seeded.
+2. Start backend:
+   ```bash
+   node index.js
+   ```
+3. Start frontend:
+   ```bash
+   npm start
+   ```
 
-### Frontend structure and components
+### Frontend (React) development
 
-#### Routing
-`src/index.js` renders `<Routes />` (not included in excerpts). Expect routes for:
-- `/` homepage
-- `/dashboard`
-- `/listings`, `/listings/create`
-- `/sitters`
+#### Routing and shell
 
-#### Shared UI Shell
-- `Navbar` displays navigation and uses `activeTab` prop to highlight current section.
-- `Homepage` is a simple landing page pointing to `/dashboard`.
+- `src/index.js` renders `<Routes />`.
+- `Navbar` provides top-level navigation; pages pass `activeTab` to highlight the current section.
 
-#### Dashboard area
-- `Dashboard` loads:
-  - user: `GET /users/:id`
-  - pets: `GET /users/:id/pets`
-  - listings: `GET /users/:id/listings`
-- `AddPet` modal:
-  - loads species: `GET /species`
-  - adds pet: `GET /pets/add?...`
-- `SitterPreferences` is currently UI-only state; it does not persist to backend.
+#### Dashboard feature
 
-#### Listings area
-- `ListingCard` renders listing content and uses `start.split('T')[0]` formatting.
-- `ListingFilter` is currently UI-only; it does not apply filtering to API results.
-- `CreateListing`:
-  - loads pets for dropdown: `GET /users/:id/pets`
-  - creates listing: `GET /listings/create?...`
+- `Dashboard` loads three data sources on mount:
+  - `GET /users/:id`
+  - `GET /users/:id/pets`
+  - `GET /users/:id/listings`
 
-### Backend development notes
+- The “Add Pet” flow is implemented as a modal (`AddPet`).
+  - loads dropdown options via `GET /species`
+  - calls `GET /pets/add?...` to insert a new pet
+
+AddPet snippet (current):
+
+```js
+addPet = () => {
+  fetch(
+    `http://localhost:5000/pets/add` +
+    `?name=${this.state.name}` +
+    `&age=${this.state.age}` +
+    `&description=${this.state.description}` +
+    `&owner_id=${user_id}` +
+    `&species_id=${this.state.species_id}`
+  )
+    .then(r => r.json())
+    .then(r => console.log(r));
+};
+```
+
+**Developer note:** after adding a pet, the Dashboard does not automatically refresh pet data unless you implement a callback to re-fetch `getUserPets()`.
+
+#### Listings feature
+
+- `ListingCard` renders listing details and assumes MySQL returns ISO-like datetime strings:
+
+```js
+{this.props.listing.start.split('T')[0]} to {this.props.listing.end.split('T')[0]}
+```
+
+- Listing filter appears UI-only per project notes (no backend filtering).
+
+#### Sitters/Ratings feature
+
+- Directory is expected to call `GET /sitters`.
+- Ratings view is expected to call `GET /ratings/:id`.
+
+#### Styling
+
+- SCSS per component, e.g. `AddPet.scss`, `Dashboard.scss`.
+- Material-UI theme defined in `src/styles/materialTheme.js`.
+
+### Backend (Express) development
 
 #### Adding a new endpoint
-Routes are defined directly on `app` in `index.js`. A typical pattern:
+
+All routes are declared in `index.js`.
 
 ```js
 app.get('/some/path', (req, res) => {
@@ -58,47 +86,25 @@ app.get('/some/path', (req, res) => {
 });
 ```
 
-#### Safer SQL (recommended)
-Current code uses string interpolation like:
+#### Recommended hardening when extending
 
-```js
-const GET_USER = `SELECT * FROM user WHERE user_id=${id};`;
-```
+- Use `express.json()` and switch mutations to `POST`.
+- Use parameterized queries (avoid string interpolation).
+- Return explicit status codes (`400`, `404`, `500`).
+- Move SQL into separate modules (e.g., `/db/queries.js`).
+- Consider `mysql.createPool()` for concurrent requests.
 
-Prefer parameterized queries to avoid SQL injection:
+### Testing (currently none)
 
-```js
-app.get('/users/:id', (req, res) => {
-  connection.query(
-    'SELECT * FROM user WHERE user_id = ?',
-    [req.params.id],
-    (err, results) => {
-      if (err) return res.status(500).json({ error: String(err) });
-      res.json({ data: results });
-    }
-  );
-});
-```
+Recommended testing additions:
 
-### Styling
+- **Frontend:** Jest + React Testing Library.
+- **Backend:** Supertest integration tests against Express.
+- **Database:** run integration tests against a dedicated test schema/container.
 
-SCSS is used per-component (e.g., `AddPet.scss`, `Dashboard.scss`). `node-sass` enables SCSS builds in CRA v2.
+### Troubleshooting
 
-### Testing
-
-No tests are present. Suggested additions:
-
-- Frontend: React Testing Library + Jest
-- Backend: Supertest for API endpoints
-- DB: Integration tests using a dedicated test schema
-
-### Linting
-
-CRA provides base ESLint config (`extends: react-app`). Backend is not explicitly linted.
-
-### Common troubleshooting
-
-- **CORS errors**: ensure backend is running and `app.use(cors())` is enabled (it is).
-- **DB connection errors**: verify MySQL credentials match `index.js`.
-- **Empty UI sections**: ensure seed data has been inserted.
+- **CORS errors:** confirm backend running and `app.use(cors())` is present.
+- **DB connection errors:** ensure credentials match `index.js` and schema `petsitting` exists.
+- **Empty UI data:** verify seed script was applied (`petsitting_insert.sql`).
 

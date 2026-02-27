@@ -2,43 +2,33 @@
 
 ## Overview
 
-**example-docs-generation-component** is a local/dev-focused pet-sitting web application implemented as a **single repository** with a two-tier architecture:
+**example-docs-generation-component** is a local/dev-focused pet-sitting web application built as a **single repository** with a classic 3-tier setup:
 
-- **Frontend**: React single-page app (Create React App) using **React Router** and **Material-UI**.
-- **Backend**: Express server exposing a set of REST-like HTTP endpoints.
-- **Database**: Local **MySQL** schema + seed data providing entities such as users, pets, species, listings/requests, ratings, and preferences.
+- **Frontend:** React SPA (Create React App) using **React Router** and **Material-UI**.
+- **Backend:** Node.js **Express** server exposing REST-like JSON endpoints.
+- **Database:** Local **MySQL** schema + seed data (users, pets, species, listings/requests, ratings, preferences).
 
-The frontend calls the backend via `fetch()` requests to `http://localhost:5000/...`. The backend runs SQL queries directly against MySQL and returns JSON `{ data: ... }` payloads.
+The frontend calls the backend via `fetch()` requests to `http://localhost:5000/...`. The backend executes raw SQL against MySQL using the `mysql` driver and typically returns responses of the form:
+
+```json
+{ "data": [ ... ] }
+```
 
 ### Key feature areas
 
-- **Dashboard**: User profile, pets, listings; modal to add a pet.
-- **Listings**: Browse listings, filter UI, create listing flow.
-- **Sitters/Ratings**: Sitter directory and rating cards (via backend endpoints).
-- **Shared shell**: Navbar + homepage routing.
+- **Homepage:** Landing page linking to “Login”/“Sign Up” (no real auth).
+- **Dashboard:** Current user profile, their pets, and their listings; includes an **Add Pet** modal.
+- **Listings:** Browse listings + create a listing.
+- **Sitters/Ratings:** Sitter directory with average rating and a ratings list per sitter.
 
-### Important notes / constraints
+### Important constraints (current)
 
-- Authentication is **not implemented**. A hardcoded `user_id` constant is used on the frontend.
-- Most mutations are implemented as **GET endpoints with query parameters** (e.g., `/pets/add`, `/listings/create`). This is convenient for demos but not production-safe.
-- The backend queries interpolate user input directly into SQL strings; this is vulnerable to **SQL injection** and should be parameterized.
-- No automated tests are present.
+- **No authentication/authorization.** A hardcoded `user_id` is used in the SPA.
+- **Mutations are implemented via GET** endpoints with query params (`/pets/add`, `/listings/create`).
+- **SQL injection risk:** queries are built using string interpolation.
+- **No tests** (frontend, backend, or DB integration).
 
-### Service catalog metadata
+### Backstage/TechDocs metadata
 
-The repo includes Backstage metadata for catalog registration:
-
-```yaml
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: example-docs-generation-component
-  annotations:
-    backstage.io/source-location: url:https://github.com/johnphilip283/Petcetera/tree/master
-spec:
-  type: service
-  lifecycle: production
-  owner: guests
-  system: examples
-```
+This repo includes Backstage component metadata (`catalog-info.yaml`) and MkDocs configuration (`mkdocs.yaml`) with `techdocs-core`.
 

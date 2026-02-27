@@ -17,59 +17,79 @@
                                                              └───────────────────┘
 ```
 
-- **Frontend (React)**
-  - Entry point: `src/index.js` renders `<Routes />`
-  - Uses React Router to navigate between pages like Dashboard, Listings, Sitters.
-  - Uses Material-UI components and SCSS styles.
-  - Data access via `fetch('http://localhost:5000/...')`
+### Repository structure (practical)
 
-- **Backend (Express)**
-  - Entry point: `index.js` at repo root
-  - Enables CORS (`app.use(cors())`) for local cross-origin calls from CRA
-  - Uses `mysql` Node package with a single `createConnection` object
-  - Implements route handlers with raw SQL strings and returns JSON responses
+- `/index.js` — Express API server entry point.
+- `/src/` — React application source.
+  - `/src/index.js` — SPA entry point.
+  - `/src/routes` — route switch (not shown in excerpts; referenced by `src/index.js`).
+  - `/src/components/*` — page/feature components.
+  - `/src/constants.js` — hardcoded `user_id` and local image paths.
+  - `/src/styles/*` — global styles and Material-UI theme.
+- `/public/` — CRA public assets (manifest, `assets/` images).
+- `/sql_script/` — schema creation, seed data, and helper scripts.
+- `/docs/` — MkDocs/TechDocs markdown sources.
+- `/mkdocs.yaml` — TechDocs site navigation.
 
-- **Database (MySQL)**
-  - Schema creation: `sql_script/petsitting_create.sql`
-  - Seed data: `sql_script/petsitting_insert.sql`
-  - Trigger-based validations for stars, date ranges, wages, etc.
+### Frontend architecture
 
-### Repository layout (conceptual)
+- **Routing:** `src/index.js` renders `<Routes />`. Pages include:
+  - `/` (Homepage)
+  - `/dashboard`
+  - `/listings` and `/listings/create`
+  - `/sitters`
+- **UI framework:** Material-UI components plus component-scoped SCSS (`node-sass`).
+- **Data fetching:** Direct `fetch('http://localhost:5000/...')` calls inside component lifecycle methods.
+- **State management:** Local component state (`this.state`) only (no Redux, no context).
 
-- `/index.js` — Express server
-- `/src/*` — React application source
-- `/public/*` — CRA static assets, `manifest.json`, images under `/assets/*`
-- `/sql_script/*` — DB schema/seed scripts
-- `/catalog-info.yaml` — Backstage catalog metadata
+Example: dashboard data load
 
-### Data flow example (Dashboard → User pets)
+```js
+componentDidMount() {
+  this.getUser();
+  this.getUserPets();
+  this.getUserListings();
+}
 
-1. `Dashboard.componentDidMount()` calls `getUserPets()`.
-2. Frontend fetches:
-   ```js
-   fetch(`http://localhost:5000/users/${user_id}/pets`)
-   ```
-3. Express route `/users/:id/pets` executes a join query against MySQL.
-4. Response body:
-   ```json
-   { "data": [ { "pet_id": 1, "name": "Tofu", "species_name": "Dog", ... } ] }
-   ```
-5. React maps results to `<PetCard pet={pet} />`.
+getUserPets = () => {
+  fetch(`http://localhost:5000/users/${user_id}/pets`)
+    .then(r => r.json())
+    .then(r => this.setState({ pets: r.data }));
+};
+```
 
-### Cross-cutting concerns
+### Backend architecture
 
-- **CORS**: enabled globally on Express.
-- **Input validation**: primarily enforced at the DB layer via triggers; app layer validation is minimal.
-- **Error handling**: routes generally `res.send(err)` on DB error; frontend logs errors to console.
-- **Date formatting**: listing cards use `start.split('T')[0]` implying MySQL returns ISO datetime strings.
+- **Express app** in `/index.js`.
+- **CORS** enabled globally to allow `localhost:3000` → `localhost:5000` calls.
+- A single `mysql.createConnection(...)` is created and used for all queries.
+- Routes are registered directly on `app`.
 
-### Known production gaps
+Current backend patterns:
 
-If you intend to harden this codebase:
+- **Read endpoints** are mostly reasonable (still unparameterized).
+- **Write endpoints** are GET routes with query params.
+- Errors are returned as raw objects via `res.send(err)`.
 
-- Replace GET mutations with POST/PUT/DELETE.
-- Use parameterized queries (`?` placeholders) or an ORM.
-- Add authentication/authorization.
-- Add environment-based configuration (ports, DB creds).
-- Introduce connection pooling (`mysql.createPool`).
+### Database architecture
+
+- `sql_script/petsitting_create.sql` creates tables:
+  - `user`, `species`, `pet`, `photo`, `request` (listings), `rating`, `preference`
+- Includes triggers to enforce:
+  - ratings stars range (1–5)
+  - `request` start date <= end date
+  - wage non-negative
+  - preventing self-ratings
+  - valid email format containing `@`
+  - ratings can only be created for sitters
+  - request pet must belong to owner
+
+These triggers provide a baseline of validation, but the app layer does not surface errors in a user-friendly way.
+
+### Cross-cutting concerns and known gaps
+
+- **Security:** SQL injection risk, no auth, plaintext passwords in seed data.
+- **API semantics:** GET used for creation endpoints; no JSON request bodies.
+- **Reliability:** single DB connection, no pooling, minimal status codes.
+- **Maintainability:** API base URLs duplicated in many components.
 
