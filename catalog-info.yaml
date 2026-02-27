@@ -4,6 +4,7 @@ metadata:
   name: example-docs-generation-component
   annotations:
     backstage.io/source-location: url:https://github.com/johnphilip283/Petcetera/tree/master
+    catalog-builder/managed-by-portal: 'true'
 spec:
   type: service
   lifecycle: production
