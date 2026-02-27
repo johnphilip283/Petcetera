@@ -4,7 +4,6 @@ metadata:
   name: example-docs-generation-component
   annotations:
     backstage.io/source-location: url:https://github.com/johnphilip283/Petcetera/tree/master
-    backstage.io/techdocs-ref: dir:.
 spec:
   type: service
   lifecycle: production
